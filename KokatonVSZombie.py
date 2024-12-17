@@ -45,6 +45,28 @@ class Zombie:
     def draw(self, surface):
         pygame.draw.rect(surface, RED, self.rect)
 
+
+class Beam:
+    def __init__(self, x, y):
+        """
+        ビームを生成するクラス
+        引数：x 味方オブジェクトの右座標
+        引数：y 味方オブジェクトの中心座標
+        """
+        self.image = pygame.image.load("ex5/fig/beam.png")
+        self.rect = self.image.get_rect()  # 画像rectの抽出
+        self.rect.x = x  # ビームのx座標 
+        self.rect.y = y  # ビームのy座標
+        self.speed = 5  # ビームのスピード
+
+    def update(self):
+        """ビームの移動"""
+        self.rect.x += self.speed  # ビームx座標にself.spped分加算
+
+    def draw(self, surface):
+        """ビームの描画"""
+        surface.blit(self.image, self.rect)  # ビーム画像の表示
+
 # テキストを描画する関数
 def draw_text(surface, text, x, y, color):
     rendered_text = font.render(text, True, color)
@@ -66,15 +88,16 @@ def draw_info_area(surface, width, height):
 # メインのゲームループ
 def main():
     clock = pygame.time.Clock()
-
-    # ゾンビを1体生成
-    zombie = Zombie(SCREEN_WIDTH, INFO_AREA_HEIGHT + GRID_SIZE * 2, 2)
-
-    # 障害物（植物）を格納するリスト
-    plants = []
+    zombie = Zombie(SCREEN_WIDTH, INFO_AREA_HEIGHT + GRID_SIZE * 2, 2)  # ゾンビを1体生成
+    plants = []  # 障害物（植物）を格納するリスト(rectが格納されていく)
+    beams = []  # 発射されたビームを格納するリスト
+    plant_timers = []  # 植物ごとのビームタイマーを格納するリスト
+    shot_time = 1  # 〇秒ごとにビームを打つ
 
     # ゲームループ
     while True:
+        timer = pygame.time.get_ticks()  # タイマー(1000で1秒)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -87,6 +110,7 @@ def main():
                     grid_y = (mouse_y // GRID_SIZE) * GRID_SIZE
                     plant_rect = pygame.Rect(grid_x, grid_y, GRID_SIZE, GRID_SIZE)
                     plants.append(plant_rect)
+                    plant_timers.append(pygame.time.get_ticks())
 
         # 背景の描画
         screen.fill(GREEN)
@@ -97,9 +121,22 @@ def main():
         # マス目の描画
         draw_grid(screen, SCREEN_WIDTH, SCREEN_HEIGHT, GRID_SIZE, INFO_AREA_HEIGHT)
 
-        # 植物の描画
-        for plant in plants:
-            pygame.draw.rect(screen, BLUE, plant)
+        for i, plant in enumerate(plants):
+                pygame.draw.rect(screen, BLUE, plant)  # 植物を描画
+
+                # 〇秒ごとにビームを発射
+                if timer - plant_timers[i] > shot_time * 1000:
+                    beams.append(Beam(plant.right, plant.centery))  # 新しいビームを追加
+                    plant_timers[i] = timer  # タイマーをリセット
+    
+
+        # ビームの移動と描画
+        for beam in beams:
+            beam.update()
+            beam.draw(screen)
+            # ビームが画面外に出たら削除
+            if beam.rect.x > SCREEN_WIDTH:
+                beams.remove(beam)
 
         # ゾンビの動きと描画
         zombie.move(plants)
